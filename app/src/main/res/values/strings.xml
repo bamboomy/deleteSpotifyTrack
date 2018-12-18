@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Delete Spotify track</string>
+    <string name="action_settings">Settings</string>
+    <string name="warning_need_token">You need to request an access token first</string>
+    <string name="code">Code: %1$s</string>
+    <string name="token">Access Token: %1$s</string>
+    <string name="not_same">The track you\'re going to delete\nis not the same track which was displayed...\nContinue?</string>
+    <string name="dialog_not_online">You need to be online to use this app.</string>
+</resources>
