@@ -38,7 +38,7 @@ import com.spotify.sdk.android.authentication.AuthenticationResponse;
 
 public class DeleteDialog extends DialogFragment {
 
-    private MainActivity activity;
+    private CapableToDeleteActivity activity;
 
     private String playlistString, artistString, track;
 
@@ -105,7 +105,7 @@ public class DeleteDialog extends DialogFragment {
         editor.commit();
     }
 
-    public void setData(MainActivity mainActivity, String playlistString, String artistString, String track) {
+    public void setData(CapableToDeleteActivity mainActivity, String playlistString, String artistString, String track) {
 
         activity = mainActivity;
 

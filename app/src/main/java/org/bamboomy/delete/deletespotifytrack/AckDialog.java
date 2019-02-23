@@ -28,11 +28,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
-import android.widget.TextView;
 
 public class AckDialog extends DialogFragment {
 
-    private MainActivity activity;
+    private CapableToDeleteActivity activity;
 
     private CheckBox neverAgain;
 
@@ -93,7 +92,7 @@ public class AckDialog extends DialogFragment {
         editor.commit();
     }
 
-    public void setData(MainActivity mainActivity) {
+    public void setData(CapableToDeleteActivity mainActivity) {
 
         activity = mainActivity;
     }

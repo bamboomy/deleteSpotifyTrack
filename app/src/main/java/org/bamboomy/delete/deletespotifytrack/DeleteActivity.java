@@ -2,7 +2,6 @@ package org.bamboomy.delete.deletespotifytrack;
 
 import android.app.AlertDialog;
 import android.app.Notification;
-import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -11,10 +10,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
@@ -38,7 +36,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class MainActivity extends CapableToDeleteActivity {
+public class DeleteActivity extends CapableToDeleteActivity {
 
     public static final String CLIENT_ID;
     public static final String CLIENT_ID_ONE = "5e1412a9d49648baac90053c7b8f697f";
@@ -85,29 +83,15 @@ public class MainActivity extends CapableToDeleteActivity {
 
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.activity_main);
+        checkOnline();
 
-        View play = findViewById(R.id.delete);
-
-        play.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                checkOnline();
-
-                final AuthenticationRequest request = getAuthenticationRequest(AuthenticationResponse.Type.TOKEN);
-                AuthenticationClient.openLoginActivity(MainActivity.this, AUTH_TOKEN_DELETE, request);
-            }
-        });
+        final AuthenticationRequest request = getAuthenticationRequest(AuthenticationResponse.Type.TOKEN);
+        AuthenticationClient.openLoginActivity(DeleteActivity.this, AUTH_TOKEN_DELETE, request);
 
         showNotification();
 
-        Intent i = getIntent();
+        Log.d("delete", "oncreate called");
 
-        if (i.getExtras() != null && i.getExtras().get("key") != null) {
-
-            finish();
-        }
     }
 
     private void showNotification() {
@@ -125,28 +109,11 @@ public class MainActivity extends CapableToDeleteActivity {
                 );
 
         nMN = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-
-        String CHANNEL_ID = "my_channel_01";
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-
-            /* Create or update. */
-            NotificationChannel channel = new NotificationChannel(CHANNEL_ID,
-                    "Channel human readable title",
-                    NotificationManager.IMPORTANCE_DEFAULT);
-            nMN.createNotificationChannel(channel);
-        }
-
-        NotificationCompat.Builder notificationCompatBuilder =
-                new NotificationCompat.Builder(
-                        getApplicationContext(), CHANNEL_ID);
-
-        Notification n = notificationCompatBuilder
+        Notification n = new Notification.Builder(this)
                 .setContentTitle("Tap to delete current song.")
                 .setSmallIcon(R.drawable.ic_launcher)
                 .setContentIntent(notifyPendingIntent)
                 .build();
-
         nMN.notify(NOTIFICATION_ID, n);
     }
 
@@ -155,19 +122,6 @@ public class MainActivity extends CapableToDeleteActivity {
         aboutToDelete = true;
 
         refresh();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        checkOnline();
-
-        if (!refreshed) {
-            final AuthenticationRequest request = getAuthenticationRequest(AuthenticationResponse.Type.TOKEN);
-            AuthenticationClient.openLoginActivity(this, AUTH_TOKEN_REQUEST_CODE, request);
-            refreshed = true;
-        }
     }
 
     private AuthenticationRequest getAuthenticationRequest(AuthenticationResponse.Type type) {
@@ -192,9 +146,7 @@ public class MainActivity extends CapableToDeleteActivity {
 
         if (AUTH_TOKEN_REQUEST_CODE == requestCode) {
 
-            mAccessToken = response.getAccessToken();
-
-            refresh();
+            throw new RuntimeException("trying to not delete in deleteActivity");
 
         } else if (AUTH_TOKEN_DELETE == requestCode) {
 
@@ -227,7 +179,7 @@ public class MainActivity extends CapableToDeleteActivity {
                     @Override
                     public void run() {
 
-                        Toast.makeText(MainActivity.this, "Failed to fetch data: " + e,
+                        Toast.makeText(DeleteActivity.this, "Failed to fetch data: " + e,
                                 Toast.LENGTH_LONG).show();
                     }
                 });
@@ -244,7 +196,7 @@ public class MainActivity extends CapableToDeleteActivity {
 
                         NotPlayingDialog lockedDialog = new NotPlayingDialog();
 
-                        lockedDialog.show(MainActivity.this.getSupportFragmentManager(), "test");
+                        lockedDialog.show(DeleteActivity.this.getSupportFragmentManager(), "test");
 
                         return;
                     }
@@ -256,30 +208,7 @@ public class MainActivity extends CapableToDeleteActivity {
 
                     playlist = splitted[4];
 
-                    final String name = jsonObject.getJSONObject("item").getString("name");
-
-                    track = name;
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            final TextView codeView = findViewById(R.id.track);
-                            codeView.setText("Track: " + name);
-                        }
-                    });
-
-                    final String artist = jsonObject.getJSONObject("item").getJSONArray("artists").getJSONObject(0)
-                            .getString("name");
-
-                    artistString = artist;
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            final TextView codeView = findViewById(R.id.artist);
-                            codeView.setText("Artist: " + artist);
-                        }
-                    });
+                    track = jsonObject.getJSONObject("item").getString("name");
 
                     JSONObject track = new JSONObject();
                     track.put("uri", jsonObject.getJSONObject("item").getString("uri"));
@@ -308,11 +237,11 @@ public class MainActivity extends CapableToDeleteActivity {
 
                                 NotPlayingDialog lockedDialog = new NotPlayingDialog();
 
-                                lockedDialog.show(MainActivity.this.getSupportFragmentManager(), "test");
+                                lockedDialog.show(DeleteActivity.this.getSupportFragmentManager(), "test");
 
                             } else {
 
-                                Toast.makeText(MainActivity.this, "Failed to parse data: " + e,
+                                Toast.makeText(DeleteActivity.this, "Failed to parse data: " + e,
                                         Toast.LENGTH_LONG).show();
                             }
                         }
@@ -332,7 +261,7 @@ public class MainActivity extends CapableToDeleteActivity {
                     @Override
                     public void run() {
 
-                        Toast.makeText(MainActivity.this, "Failed to fetch name data: " + e,
+                        Toast.makeText(DeleteActivity.this, "Failed to fetch name data: " + e,
                                 Toast.LENGTH_LONG).show();
                     }
                 });
@@ -347,23 +276,14 @@ public class MainActivity extends CapableToDeleteActivity {
 
                     playlistString = output;
 
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
+                    refreshed = true;
 
-                            final TextView codeView = findViewById(R.id.list);
-                            codeView.setText("List: " + output);
+                    if (aboutToDelete) {
 
-                            refreshed = true;
+                        aboutToDelete = false;
 
-                            if (aboutToDelete) {
-
-                                aboutToDelete = false;
-
-                                showDeleteDialog();
-                            }
-                        }
-                    });
+                        showDeleteDialog();
+                    }
 
                 } catch (final JSONException e) {
 
@@ -371,7 +291,7 @@ public class MainActivity extends CapableToDeleteActivity {
                         @Override
                         public void run() {
 
-                            Toast.makeText(MainActivity.this, "Failed to parse name data: " + e,
+                            Toast.makeText(DeleteActivity.this, "Failed to parse name data: " + e,
                                     Toast.LENGTH_LONG).show();
 
                         }
@@ -388,29 +308,7 @@ public class MainActivity extends CapableToDeleteActivity {
 
         if (sharedPrefs.getBoolean("dontAsk", false)) {
 
-            if (!oldUri.equalsIgnoreCase(uri)) {
-
-                if (sharedPrefs.getBoolean("dontAck", false)) {
-
-                    performDelete();
-
-                } else {
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-
-                            AckDialog appstoreDialog = new AckDialog();
-                            appstoreDialog.setData(MainActivity.this);
-                            appstoreDialog.show(getSupportFragmentManager(), "doesn't matter");
-                        }
-                    });
-                }
-
-            } else {
-
-                performDelete();
-            }
+            performDelete();
 
         } else {
 
@@ -419,7 +317,7 @@ public class MainActivity extends CapableToDeleteActivity {
                 public void run() {
 
                     DeleteDialog appstoreDialog = new DeleteDialog();
-                    appstoreDialog.setData(MainActivity.this, playlistString, artistString, track);
+                    appstoreDialog.setData(DeleteActivity.this, playlistString, artistString, track);
                     appstoreDialog.show(getSupportFragmentManager(), "doesn't matter");
                 }
             });
@@ -430,16 +328,6 @@ public class MainActivity extends CapableToDeleteActivity {
         if (mCall != null) {
             mCall.cancel();
         }
-    }
-
-    public void onRefresh(View view) {
-
-        checkOnline();
-
-        aboutToDelete = false;
-
-        final AuthenticationRequest request = getAuthenticationRequest(AuthenticationResponse.Type.TOKEN);
-        AuthenticationClient.openLoginActivity(this, AUTH_TOKEN_REQUEST_CODE, request);
     }
 
     public void performDelete() {
@@ -464,7 +352,7 @@ public class MainActivity extends CapableToDeleteActivity {
                     @Override
                     public void run() {
 
-                        Toast.makeText(MainActivity.this, "Failed to fetch delete data: " + e,
+                        Toast.makeText(DeleteActivity.this, "Failed to fetch delete data: " + e,
                                 Toast.LENGTH_LONG).show();
 
                     }
@@ -480,7 +368,7 @@ public class MainActivity extends CapableToDeleteActivity {
                     @Override
                     public void run() {
 
-                        Toast.makeText(MainActivity.this, " " + track + "\n deleted  from playlist: \n " + playlistString,
+                        Toast.makeText(DeleteActivity.this, " " + track + "\n deleted  from playlist: \n " + playlistString,
                                 Toast.LENGTH_LONG).show();
                     }
                 });
@@ -512,7 +400,7 @@ public class MainActivity extends CapableToDeleteActivity {
                     @Override
                     public void run() {
 
-                        Toast.makeText(MainActivity.this, "Failed to fetch skip data: " + e,
+                        Toast.makeText(DeleteActivity.this, "Failed to fetch skip data: " + e,
                                 Toast.LENGTH_LONG).show();
 
                     }
@@ -522,8 +410,13 @@ public class MainActivity extends CapableToDeleteActivity {
             @Override
             public void onResponse(Call call, Response response) {
 
-                final AuthenticationRequest request = getAuthenticationRequest(AuthenticationResponse.Type.TOKEN);
-                AuthenticationClient.openLoginActivity(MainActivity.this, AUTH_TOKEN_REQUEST_CODE, request);
+                Intent i = new Intent(DeleteActivity.this, MainActivity.class);
+
+                i.putExtra("key", 1);
+
+                startActivity(i);
+
+                finish();
             }
         };
     }
