@@ -6,4 +6,5 @@
     <string name="token">Access Token: %1$s</string>
     <string name="not_same">The track you\'re going to delete\nis not the same track which was displayed...\nContinue?</string>
     <string name="dialog_not_online">You need to be online to use this app.</string>
+    <string name="choose_list">You didn\'t choose a list yet \nwhere you want the current song \nto be added...</string>
 </resources>

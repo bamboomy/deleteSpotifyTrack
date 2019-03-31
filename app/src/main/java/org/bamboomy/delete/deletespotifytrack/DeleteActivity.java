@@ -36,6 +36,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
+import static org.bamboomy.delete.deletespotifytrack.MainActivity.SKIP_TO_NEXT;
+
 public class DeleteActivity extends CapableToDeleteActivity {
 
     public static final String CLIENT_ID;
@@ -68,8 +70,6 @@ public class DeleteActivity extends CapableToDeleteActivity {
     private String playlist, track, artistString, playlistString;
     private String uri = "1", oldUri = "2";
 
-    private boolean refreshed = false;
-
     private boolean aboutToDelete = false;
 
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
@@ -77,6 +77,8 @@ public class DeleteActivity extends CapableToDeleteActivity {
     private NotificationManager nMN;
 
     private int NOTIFICATION_ID = 0;
+
+    public static final String CHOOSE_KEY = "choose_key";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -276,8 +278,6 @@ public class DeleteActivity extends CapableToDeleteActivity {
 
                     playlistString = output;
 
-                    refreshed = true;
-
                     if (aboutToDelete) {
 
                         aboutToDelete = false;
@@ -373,19 +373,33 @@ public class DeleteActivity extends CapableToDeleteActivity {
                     }
                 });
 
-                RequestBody body = RequestBody.create(JSON, "");
+                if (PreferenceManager
+                        .getDefaultSharedPreferences(DeleteActivity.this)
+                        .getBoolean(SKIP_TO_NEXT, true)) {
 
-                final Request request = new Request.Builder()
-                        .url("https://api.spotify.com/v1/me/player/next")
-                        .addHeader("Authorization", "Bearer " + mAccessToken)
-                        .post(body)
-                        .build();
+                    RequestBody body = RequestBody.create(JSON, "");
 
-                cancelCall();
-                mCall = mOkHttpClient.newCall(request);
+                    final Request request = new Request.Builder()
+                            .url("https://api.spotify.com/v1/me/player/next")
+                            .addHeader("Authorization", "Bearer " + mAccessToken)
+                            .post(body)
+                            .build();
 
-                mCall.enqueue(getDeletedCallback());
+                    cancelCall();
+                    mCall = mOkHttpClient.newCall(request);
 
+                    mCall.enqueue(getDeletedCallback());
+
+                } else {
+
+                    Intent i = new Intent(DeleteActivity.this, MainActivity.class);
+
+                    i.putExtra("key", 1);
+
+                    startActivity(i);
+
+                    finish();
+                }
             }
         });
     }

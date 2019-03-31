@@ -17,6 +17,8 @@ import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.view.View;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,6 +31,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -38,6 +41,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
+import static org.bamboomy.delete.deletespotifytrack.DeleteActivity.CHOOSE_KEY;
+
 public class MainActivity extends CapableToDeleteActivity {
 
     public static final String CLIENT_ID;
@@ -45,6 +50,7 @@ public class MainActivity extends CapableToDeleteActivity {
     public static final String CLIENT_ID_TWO = "a8e0c5282c4a4a4eaa47c2172a41507b";
     public static final int AUTH_TOKEN_REQUEST_CODE = 0x10;
     public static final int AUTH_TOKEN_DELETE = 0x11;
+    public static final int AUTH_TOKEN_LISTS = 0x12;
 
     static {
 
@@ -80,6 +86,10 @@ public class MainActivity extends CapableToDeleteActivity {
 
     private int NOTIFICATION_ID = 0;
 
+    public static final String SKIP_TO_NEXT = "skipToNext";
+
+    private boolean editFlag = false, addFlag = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -87,9 +97,9 @@ public class MainActivity extends CapableToDeleteActivity {
 
         setContentView(R.layout.activity_main);
 
-        View play = findViewById(R.id.delete);
+        View delete = findViewById(R.id.delete);
 
-        play.setOnClickListener(new View.OnClickListener() {
+        delete.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
@@ -108,6 +118,74 @@ public class MainActivity extends CapableToDeleteActivity {
 
             finish();
         }
+
+        final SharedPreferences sharedPrefs = PreferenceManager
+                .getDefaultSharedPreferences(this);
+
+        if (!sharedPrefs.getBoolean(SKIP_TO_NEXT, true)) {
+
+            ((CheckBox) findViewById(R.id.skip_to_next)).setChecked(false);
+        }
+
+        ((CheckBox) findViewById(R.id.skip_to_next)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView,
+                                         boolean isChecked) {
+
+                final SharedPreferences.Editor editor = sharedPrefs.edit();
+
+                editor.putBoolean(SKIP_TO_NEXT, isChecked);
+
+                editor.commit();
+            }
+        });
+
+        if (!sharedPrefs.getString(CHOOSE_KEY, CHOOSE_KEY).equalsIgnoreCase(CHOOSE_KEY)) {
+
+            ((TextView) findViewById(R.id.goldList)).setText(sharedPrefs.getString(CHOOSE_KEY, CHOOSE_KEY));
+        }
+
+        findViewById(R.id.chest).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                if (sharedPrefs.getString(CHOOSE_KEY, CHOOSE_KEY).equalsIgnoreCase(CHOOSE_KEY)) {
+
+                    editFlag = false;
+                    addFlag = false;
+
+                    getLists();
+
+                } else {
+
+                    addFlag = true;
+
+                    getLists();
+                }
+            }
+        });
+
+        findViewById(R.id.edit).setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                editFlag = true;
+                addFlag = false;
+
+                getLists();
+            }
+        });
+
+    }
+
+    private void getLists() {
+
+        checkOnline();
+
+        final AuthenticationRequest request = getAuthenticationRequest(AuthenticationResponse.Type.TOKEN);
+        AuthenticationClient.openLoginActivity(MainActivity.this, AUTH_TOKEN_LISTS, request);
     }
 
     private void showNotification() {
@@ -174,7 +252,7 @@ public class MainActivity extends CapableToDeleteActivity {
         return new AuthenticationRequest.Builder(CLIENT_ID, type, getRedirectUri().toString())
                 .setShowDialog(false)
                 .setScopes(new String[]{"user-read-playback-state", "playlist-modify-private", "playlist-modify-public",
-                        "user-modify-playback-state"})
+                        "playlist-read-private", "user-modify-playback-state"})
                 .build();
     }
 
@@ -201,7 +279,178 @@ public class MainActivity extends CapableToDeleteActivity {
             mAccessToken = response.getAccessToken();
 
             delete();
+
+        } else if (AUTH_TOKEN_LISTS == requestCode) {
+
+            mAccessToken = response.getAccessToken();
+
+            getId();
         }
+    }
+
+    private void getId() {
+
+        final Request request = new Request.Builder()
+                .url("https://api.spotify.com/v1/me")
+                .addHeader("Authorization", "Bearer " + mAccessToken)
+                .build();
+
+        cancelCall();
+        mCall = mOkHttpClient.newCall(request);
+
+        mCall.enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, final IOException e) {
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        Toast.makeText(MainActivity.this, "Failed to fetch id data: " + e,
+                                Toast.LENGTH_LONG).show();
+
+                    }
+                });
+            }
+
+            @Override
+            public void onResponse(Call call, final Response response) throws IOException {
+
+                Log.d("delete", response.toString());
+
+                try {
+
+                    showLists(new JSONObject(response.body().string()).getString("id"));
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            Toast.makeText(MainActivity.this, "something wrong sith json: ",
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+            }
+        });
+
+    }
+
+    private void showLists(final String id) {
+
+        final Request request = new Request.Builder()
+                .url("https://api.spotify.com/v1/me/playlists?limit=50")
+                .addHeader("Authorization", "Bearer " + mAccessToken)
+                .build();
+
+        cancelCall();
+        mCall = mOkHttpClient.newCall(request);
+
+        mCall.enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, final IOException e) {
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        Toast.makeText(MainActivity.this, "Failed to fetch list data: " + e,
+                                Toast.LENGTH_LONG).show();
+
+                    }
+                });
+            }
+
+            @Override
+            public void onResponse(Call call, final Response response) throws IOException {
+
+                Log.d("delete", response.toString());
+
+
+                try {
+
+                    JSONArray array = new JSONObject(response.body().string()).getJSONArray("items");
+
+                    final ArrayList<List> result = new ArrayList<>();
+
+                    for (int i = 0; i < array.length(); i++) {
+
+                        JSONObject jsonList = array.getJSONObject(i);
+
+                        if (jsonList.getJSONObject("owner").getString("id").equalsIgnoreCase(id)) {
+
+                            List list = new List();
+
+                            list.setName(jsonList.getString("name"));
+
+                            list.setId(jsonList.getString("id"));
+
+                            result.add(list);
+                        }
+                    }
+
+                    SharedPreferences sharedPrefs = PreferenceManager
+                            .getDefaultSharedPreferences(MainActivity.this);
+
+                    if (addFlag) {
+
+                        String tempId = "";
+
+                        for (List list : result) {
+
+                            if (list.getName().equalsIgnoreCase(sharedPrefs.getString(CHOOSE_KEY, CHOOSE_KEY))) {
+
+                                tempId = list.getId();
+
+                                break;
+                            }
+                        }
+
+                        final String id = tempId;
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+
+                                Toast.makeText(MainActivity.this, id, Toast.LENGTH_LONG).show();
+                            }
+                        });
+
+                    } else {
+
+                        ChooseListDialog appstoreDialog = new ChooseListDialog();
+
+                        if (editFlag) {
+
+                            appstoreDialog.setData(MainActivity.this, sharedPrefs, result, "Choose a new list...");
+
+                        } else {
+
+                            appstoreDialog.setData(MainActivity.this, sharedPrefs, result, "");
+                        }
+
+                        appstoreDialog.show(getSupportFragmentManager(), "doesn't matter");
+                    }
+
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            Toast.makeText(MainActivity.this, "something wrong sith json2: ",
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+            }
+        });
+
     }
 
     private void refresh() {
@@ -485,19 +734,26 @@ public class MainActivity extends CapableToDeleteActivity {
                     }
                 });
 
-                RequestBody body = RequestBody.create(JSON, "");
+                if (((CheckBox) findViewById(R.id.skip_to_next)).isChecked()) {
 
-                final Request request = new Request.Builder()
-                        .url("https://api.spotify.com/v1/me/player/next")
-                        .addHeader("Authorization", "Bearer " + mAccessToken)
-                        .post(body)
-                        .build();
+                    RequestBody body = RequestBody.create(JSON, "");
 
-                cancelCall();
-                mCall = mOkHttpClient.newCall(request);
+                    final Request request = new Request.Builder()
+                            .url("https://api.spotify.com/v1/me/player/next")
+                            .addHeader("Authorization", "Bearer " + mAccessToken)
+                            .post(body)
+                            .build();
 
-                mCall.enqueue(getDeletedCallback());
+                    cancelCall();
+                    mCall = mOkHttpClient.newCall(request);
 
+                    mCall.enqueue(getDeletedCallback());
+
+                } else {
+
+                    final AuthenticationRequest request = getAuthenticationRequest(AuthenticationResponse.Type.TOKEN);
+                    AuthenticationClient.openLoginActivity(MainActivity.this, AUTH_TOKEN_REQUEST_CODE, request);
+                }
             }
         });
     }

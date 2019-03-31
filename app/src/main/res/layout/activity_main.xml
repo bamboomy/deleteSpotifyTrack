@@ -37,6 +37,52 @@
             android:layout_height="wrap_content"
             android:src="@drawable/can" />
 
+        <CheckBox
+            android:id="@+id/skip_to_next"
+            android:checked="true"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="skip to next song after delete" />
+
+        <ImageView
+            android:id="@+id/chest"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/chest" />
+
+        <android.support.v7.widget.LinearLayoutCompat
+            android:layout_width="wrap_content"
+            android:orientation="horizontal"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/goldList"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:textColor="#8B4513"
+                android:text="Choose" />
+
+            <ImageView
+                android:id="@+id/edit"
+                android:layout_width="wrap_content"
+                android:layout_gravity="center"
+                android:layout_height="wrap_content"
+                android:src="@drawable/edit" />
+
+        </android.support.v7.widget.LinearLayoutCompat>
+
+        <CheckBox
+            android:id="@+id/skip_to_next_gold"
+            android:checked="true"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="skip to next song after harvest" />
+
         <TextView
             android:id="@+id/list"
             android:layout_width="wrap_content"
