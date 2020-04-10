@@ -24,17 +24,26 @@ import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 
 public class NotPlayingDialog extends DialogFragment {
+
+    private String action;
+
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-        builder.setMessage("No song is playing...\nYou can only delete the currently playing song...")
-        		.setNeutralButton("Got it!", new DialogInterface.OnClickListener() {
+        builder.setMessage("No song is playing...\nYou can only " + action
+                + " the currently playing song...")
+                .setNeutralButton("Got it!", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                    	//do nothing
+                        //do nothing
                     }
                 });
 
         return builder.create();
+    }
+
+    public void setAction(String action) {
+
+        this.action = action;
     }
 }

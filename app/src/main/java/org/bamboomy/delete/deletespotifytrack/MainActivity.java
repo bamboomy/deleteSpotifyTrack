@@ -1,5 +1,6 @@
 package org.bamboomy.delete.deletespotifytrack;
 
+import android.animation.ValueAnimator;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -17,6 +18,7 @@ import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.TextView;
@@ -46,11 +48,16 @@ import static org.bamboomy.delete.deletespotifytrack.DeleteActivity.CHOOSE_KEY;
 public class MainActivity extends CapableToDeleteActivity {
 
     public static final String CLIENT_ID;
-    public static final String CLIENT_ID_ONE = "5e1412a9d49648baac90053c7b8f697f";
+    //public static final String CLIENT_ID_ONE = "5e1412a9d49648baac90053c7b8f697f";
+    public static final String CLIENT_ID_ONE = "a8e0c5282c4a4a4eaa47c2172a41507b";
     public static final String CLIENT_ID_TWO = "a8e0c5282c4a4a4eaa47c2172a41507b";
     public static final int AUTH_TOKEN_REQUEST_CODE = 0x10;
     public static final int AUTH_TOKEN_DELETE = 0x11;
     public static final int AUTH_TOKEN_LISTS = 0x12;
+
+    private String listId = "", harvestListName;
+
+    static boolean defaultList = false;
 
     static {
 
@@ -78,17 +85,21 @@ public class MainActivity extends CapableToDeleteActivity {
 
     private boolean refreshed = false;
 
-    private boolean aboutToDelete = false;
+    private boolean aboutToDelete = false, aboutToAdd = false;
 
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
     private NotificationManager nMN;
 
-    private int NOTIFICATION_ID = 0;
+    public final static int NOTIFICATION_ID = 0, NOTIFICATION_ID_2 = 2;
 
-    public static final String SKIP_TO_NEXT = "skipToNext";
+    public static final String SKIP_TO_NEXT = "skipToNext", SKIP_TO_NEXT_GOLD = "skipToNextGold";
+    public static final String SHOW_DELETE = "showDelete", SHOW_ADD = "showAdd";
 
     private boolean editFlag = false, addFlag = false;
+    private CharSequence jsonUri;
+
+    private boolean isDeleteGroupVisible = false, isGoldGroupVisible = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,8 +120,6 @@ public class MainActivity extends CapableToDeleteActivity {
                 AuthenticationClient.openLoginActivity(MainActivity.this, AUTH_TOKEN_DELETE, request);
             }
         });
-
-        showNotification();
 
         Intent i = getIntent();
 
@@ -141,6 +150,67 @@ public class MainActivity extends CapableToDeleteActivity {
             }
         });
 
+        if (!sharedPrefs.getBoolean(SKIP_TO_NEXT_GOLD, true)) {
+
+            ((CheckBox) findViewById(R.id.skip_to_next_gold)).setChecked(false);
+        }
+
+        ((CheckBox) findViewById(R.id.skip_to_next_gold)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView,
+                                         boolean isChecked) {
+
+                final SharedPreferences.Editor editor = sharedPrefs.edit();
+
+                editor.putBoolean(SKIP_TO_NEXT_GOLD, isChecked);
+
+                editor.commit();
+            }
+        });
+
+        if (!sharedPrefs.getBoolean(SHOW_DELETE, true)) {
+
+            ((CheckBox) findViewById(R.id.notification_delete)).setChecked(false);
+        }
+
+        ((CheckBox) findViewById(R.id.notification_delete)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView,
+                                         boolean isChecked) {
+
+                final SharedPreferences.Editor editor = sharedPrefs.edit();
+
+                editor.putBoolean(SHOW_DELETE, isChecked);
+
+                editor.commit();
+
+                toggleDeleteNotification();
+            }
+        });
+
+        if (!sharedPrefs.getBoolean(SHOW_ADD, true)) {
+
+            ((CheckBox) findViewById(R.id.notification_harvest)).setChecked(false);
+        }
+
+        ((CheckBox) findViewById(R.id.notification_harvest)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView,
+                                         boolean isChecked) {
+
+                final SharedPreferences.Editor editor = sharedPrefs.edit();
+
+                editor.putBoolean(SHOW_ADD, isChecked);
+
+                editor.commit();
+
+                toggleAddNotification();
+            }
+        });
+
         if (!sharedPrefs.getString(CHOOSE_KEY, CHOOSE_KEY).equalsIgnoreCase(CHOOSE_KEY)) {
 
             ((TextView) findViewById(R.id.goldList)).setText(sharedPrefs.getString(CHOOSE_KEY, CHOOSE_KEY));
@@ -160,6 +230,7 @@ public class MainActivity extends CapableToDeleteActivity {
                 } else {
 
                     addFlag = true;
+                    editFlag = false;
 
                     getLists();
                 }
@@ -178,17 +249,78 @@ public class MainActivity extends CapableToDeleteActivity {
             }
         });
 
+        toggleDeleteNotification();
+
+        toggleAddNotification();
+
+        findViewById(R.id.deleteOptions).setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                if (isDeleteGroupVisible) {
+
+                    collapse(findViewById(R.id.deleteGroup), 1000, 0);
+
+                    isDeleteGroupVisible = false;
+
+                } else {
+
+                    expand(findViewById(R.id.deleteGroup), 1000, 300);
+
+                    collapse(findViewById(R.id.chestGroup), 1000, 0);
+
+                    isDeleteGroupVisible = true;
+                    isGoldGroupVisible = false;
+                }
+            }
+        });
+
+        findViewById(R.id.chestOptions).setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                if (isGoldGroupVisible) {
+
+                    collapse(findViewById(R.id.chestGroup), 1000, 0);
+
+                    isGoldGroupVisible = false;
+
+                } else {
+
+                    expand(findViewById(R.id.chestGroup), 1000, 400);
+
+                    collapse(findViewById(R.id.deleteGroup), 1000, 0);
+
+                    isGoldGroupVisible = true;
+                    isDeleteGroupVisible = false;
+                }
+            }
+        });
     }
 
-    private void getLists() {
+    private void toggleDeleteNotification() {
 
-        checkOnline();
+        final SharedPreferences sharedPrefs = PreferenceManager
+                .getDefaultSharedPreferences(this);
 
-        final AuthenticationRequest request = getAuthenticationRequest(AuthenticationResponse.Type.TOKEN);
-        AuthenticationClient.openLoginActivity(MainActivity.this, AUTH_TOKEN_LISTS, request);
+        if (sharedPrefs.getBoolean(SHOW_DELETE, true)) {
+
+            showDeleteNotification();
+
+        } else {
+
+            hideDeleteNotification();
+        }
+
     }
 
-    private void showNotification() {
+    private void showDeleteNotification() {
+
+        String CHANNEL_ID = "my_channel_01";
+
+        NotificationCompat.Builder notificationCompatBuilder;
 
         Intent myIntent = new Intent(this, DeleteActivity.class);
 
@@ -204,7 +336,66 @@ public class MainActivity extends CapableToDeleteActivity {
 
         nMN = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 
-        String CHANNEL_ID = "my_channel_01";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+            // Create or update.
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID,
+                    "Channel human readable title",
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            nMN.createNotificationChannel(channel);
+        }
+
+        notificationCompatBuilder =
+                new NotificationCompat.Builder(
+                        getApplicationContext(), CHANNEL_ID);
+
+        Notification n = notificationCompatBuilder
+                .setContentTitle("Tap to delete current song.")
+                .setSmallIcon(R.drawable.can)
+                .setContentIntent(notifyPendingIntent)
+                .build();
+
+        nMN.notify(NOTIFICATION_ID, n);
+
+    }
+
+    private void hideDeleteNotification() {
+
+        nMN.cancel(NOTIFICATION_ID);
+    }
+
+    private void toggleAddNotification() {
+
+        final SharedPreferences sharedPrefs = PreferenceManager
+                .getDefaultSharedPreferences(this);
+
+        if (sharedPrefs.getBoolean(SHOW_ADD, true)) {
+
+            showAddNotification();
+
+        } else {
+
+            hideAddNotification();
+        }
+    }
+
+    private void showAddNotification() {
+
+        Intent myIntent = new Intent(this, HarvestActivity.class);
+
+        myIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+
+        PendingIntent notifyPendingIntent =
+                PendingIntent.getActivity(
+                        this,
+                        2,
+                        myIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                );
+
+        nMN = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+
+        String CHANNEL_ID = "my_channel_02";
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
@@ -220,12 +411,26 @@ public class MainActivity extends CapableToDeleteActivity {
                         getApplicationContext(), CHANNEL_ID);
 
         Notification n = notificationCompatBuilder
-                .setContentTitle("Tap to delete current song.")
-                .setSmallIcon(R.drawable.ic_launcher)
+                .setContentTitle("Tap to harvest current song.")
+                .setSmallIcon(R.drawable.chest)
                 .setContentIntent(notifyPendingIntent)
                 .build();
 
-        nMN.notify(NOTIFICATION_ID, n);
+        nMN.notify(NOTIFICATION_ID_2, n);
+
+    }
+
+    private void hideAddNotification() {
+
+        nMN.cancel(NOTIFICATION_ID_2);
+    }
+
+    private void getLists() {
+
+        checkOnline();
+
+        final AuthenticationRequest request = getAuthenticationRequest(AuthenticationResponse.Type.TOKEN);
+        AuthenticationClient.openLoginActivity(MainActivity.this, AUTH_TOKEN_LISTS, request);
     }
 
     private void delete() {
@@ -235,9 +440,23 @@ public class MainActivity extends CapableToDeleteActivity {
         refresh();
     }
 
+    private void add() {
+
+        aboutToAdd = true;
+
+        refresh();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
+
+        if (defaultList) {
+
+            ((TextView) this.findViewById(R.id.goldList)).setText(HarvestActivity.DEFAULT_LIST_NAME);
+
+            defaultList = false;
+        }
 
         checkOnline();
 
@@ -367,8 +586,7 @@ public class MainActivity extends CapableToDeleteActivity {
             @Override
             public void onResponse(Call call, final Response response) throws IOException {
 
-                Log.d("delete", response.toString());
-
+                Log.d("lists", response.toString());
 
                 try {
 
@@ -397,27 +615,21 @@ public class MainActivity extends CapableToDeleteActivity {
 
                     if (addFlag) {
 
-                        String tempId = "";
+                        addFlag = false;
 
                         for (List list : result) {
 
                             if (list.getName().equalsIgnoreCase(sharedPrefs.getString(CHOOSE_KEY, CHOOSE_KEY))) {
 
-                                tempId = list.getId();
+                                listId = list.getId();
+
+                                harvestListName = list.getName();
+
+                                add();
 
                                 break;
                             }
                         }
-
-                        final String id = tempId;
-
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-
-                                Toast.makeText(MainActivity.this, id, Toast.LENGTH_LONG).show();
-                            }
-                        });
 
                     } else {
 
@@ -489,11 +701,28 @@ public class MainActivity extends CapableToDeleteActivity {
 
                     String[] splitted = jsonObject.getJSONObject("context").getString("uri").split(":");
 
-                    if (aboutToDelete && !jsonObject.getBoolean("is_playing")) {
+                    if (!jsonObject.getBoolean("is_playing")) {
 
-                        NotPlayingDialog lockedDialog = new NotPlayingDialog();
+                        if ((aboutToDelete || aboutToAdd)) {
 
-                        lockedDialog.show(MainActivity.this.getSupportFragmentManager(), "test");
+                            NotPlayingDialog lockedDialog = new NotPlayingDialog();
+
+                            if (aboutToDelete) {
+
+                                lockedDialog.setAction("delete");
+
+                            } else {
+
+                                lockedDialog.setAction("add");
+                            }
+
+                            lockedDialog.show(MainActivity.this.getSupportFragmentManager(), "test");
+
+                        } else {
+
+                            Toast.makeText(MainActivity.this, "No song is currently playing... ",
+                                    Toast.LENGTH_LONG).show();
+                        }
 
                         return;
                     }
@@ -530,17 +759,25 @@ public class MainActivity extends CapableToDeleteActivity {
                         }
                     });
 
-                    JSONObject track = new JSONObject();
-                    track.put("uri", jsonObject.getJSONObject("item").getString("uri"));
-
                     oldUri = uri;
                     uri = jsonObject.getJSONObject("item").getString("uri");
 
-                    JSONObject[] array = new JSONObject[]{track};
+                    if (aboutToDelete) {
 
-                    JSONArray tracks = new JSONArray(array);
-                    json = new JSONObject();
-                    json.put("tracks", tracks);
+                        JSONObject track = new JSONObject();
+                        track.put("uri", jsonObject.getJSONObject("item").getString("uri"));
+
+                        JSONObject[] array = new JSONObject[]{track};
+
+                        JSONArray tracks = new JSONArray(array);
+                        json = new JSONObject();
+                        json.put("tracks", tracks);
+
+                    } else if (aboutToAdd) {
+
+                        jsonUri = jsonObject.getJSONObject("item").getString("uri")
+                                .replace(":", "%3A");
+                    }
 
                     cancelCall();
                     mCall = mOkHttpClient.newCall(request);
@@ -610,6 +847,12 @@ public class MainActivity extends CapableToDeleteActivity {
                                 aboutToDelete = false;
 
                                 showDeleteDialog();
+
+                            } else if (aboutToAdd) {
+
+                                aboutToAdd = false;
+
+                                performAdd();
                             }
                         }
                     });
@@ -628,6 +871,77 @@ public class MainActivity extends CapableToDeleteActivity {
                 }
             }
         };
+    }
+
+    private void performAdd() {
+
+        RequestBody body = RequestBody.create(JSON, "");
+
+        Log.d("add", jsonUri + " -> " + listId);
+
+        final Request request = new Request.Builder()
+                .url("https://api.spotify.com/v1/playlists/" + listId + "/tracks?uris=" + jsonUri)
+                .post(body)
+                .addHeader("Authorization", "Bearer " + mAccessToken)
+                .addHeader("Content-Type", "application/json")
+                .build();
+
+        cancelCall();
+        mCall = mOkHttpClient.newCall(request);
+
+        mCall.enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, final IOException e) {
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        Toast.makeText(MainActivity.this, "Failed to fetch delete data: " + e,
+                                Toast.LENGTH_LONG).show();
+
+                    }
+                });
+            }
+
+            @Override
+            public void onResponse(Call call, final Response response) throws IOException {
+
+                Log.d("add", response.toString());
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        Toast.makeText(MainActivity.this, " " + track
+                                        + "\n added to playlist: \n " + harvestListName,
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
+
+                if (((CheckBox) findViewById(R.id.skip_to_next_gold)).isChecked()) {
+
+                    RequestBody body = RequestBody.create(JSON, "");
+
+                    final Request request = new Request.Builder()
+                            .url("https://api.spotify.com/v1/me/player/next")
+                            .addHeader("Authorization", "Bearer " + mAccessToken)
+                            .post(body)
+                            .build();
+
+                    cancelCall();
+                    mCall = mOkHttpClient.newCall(request);
+
+                    mCall.enqueue(getDeletedCallback());
+
+                } else {
+
+                    final AuthenticationRequest request = getAuthenticationRequest(AuthenticationResponse.Type.TOKEN);
+                    AuthenticationClient.openLoginActivity(MainActivity.this, AUTH_TOKEN_REQUEST_CODE, request);
+                }
+            }
+        });
+
     }
 
     private void showDeleteDialog() {
@@ -814,4 +1128,39 @@ public class MainActivity extends CapableToDeleteActivity {
             builder.show();
         }
     }
+
+    public static void expand(final View v, int duration, int targetHeight) {
+
+        int prevHeight = v.getHeight();
+
+        v.setVisibility(View.VISIBLE);
+        ValueAnimator valueAnimator = ValueAnimator.ofInt(prevHeight, targetHeight);
+        valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                v.getLayoutParams().height = (int) animation.getAnimatedValue();
+                v.requestLayout();
+            }
+        });
+        valueAnimator.setInterpolator(new DecelerateInterpolator());
+        valueAnimator.setDuration(duration);
+        valueAnimator.start();
+    }
+
+    public static void collapse(final View v, int duration, int targetHeight) {
+        int prevHeight = v.getHeight();
+        ValueAnimator valueAnimator = ValueAnimator.ofInt(prevHeight, targetHeight);
+        valueAnimator.setInterpolator(new DecelerateInterpolator());
+        valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                v.getLayoutParams().height = (int) animation.getAnimatedValue();
+                v.requestLayout();
+            }
+        });
+        valueAnimator.setInterpolator(new DecelerateInterpolator());
+        valueAnimator.setDuration(duration);
+        valueAnimator.start();
+    }
+
 }

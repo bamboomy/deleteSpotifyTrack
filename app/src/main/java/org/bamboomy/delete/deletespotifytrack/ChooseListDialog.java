@@ -23,6 +23,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.DialogFragment;
+import android.support.v7.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -38,7 +39,7 @@ import static org.bamboomy.delete.deletespotifytrack.DeleteActivity.CHOOSE_KEY;
 
 public class ChooseListDialog extends DialogFragment implements AdapterView.OnItemSelectedListener {
 
-    private CapableToDeleteActivity activity;
+    private AppCompatActivity activity;
 
     private CheckBox neverAgain;
 
@@ -83,7 +84,7 @@ public class ChooseListDialog extends DialogFragment implements AdapterView.OnIt
 
         for (int i = 0; i < list.size(); i++) {
 
-            items[i] = list.get(i).getId();
+            items[i] = list.get(i).getName();
         }
 
         //get the spinner from the xml.
@@ -113,7 +114,7 @@ public class ChooseListDialog extends DialogFragment implements AdapterView.OnIt
         editor.commit();
     }
 
-    public void setData(CapableToDeleteActivity mainActivity, SharedPreferences sharedPrefs, ArrayList<List> result, String confirm) {
+    public void setData(AppCompatActivity mainActivity, SharedPreferences sharedPrefs, ArrayList<List> result, String confirm) {
 
         activity = mainActivity;
         this.sharedPrefs = sharedPrefs;

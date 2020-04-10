@@ -36,13 +36,12 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
+import static org.bamboomy.delete.deletespotifytrack.MainActivity.CLIENT_ID_ONE;
 import static org.bamboomy.delete.deletespotifytrack.MainActivity.SKIP_TO_NEXT;
 
 public class DeleteActivity extends CapableToDeleteActivity {
 
     public static final String CLIENT_ID;
-    public static final String CLIENT_ID_ONE = "5e1412a9d49648baac90053c7b8f697f";
-    public static final String CLIENT_ID_TWO = "a8e0c5282c4a4a4eaa47c2172a41507b";
     public static final int AUTH_TOKEN_REQUEST_CODE = 0x10;
     public static final int AUTH_TOKEN_DELETE = 0x11;
 
@@ -113,7 +112,7 @@ public class DeleteActivity extends CapableToDeleteActivity {
         nMN = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         Notification n = new Notification.Builder(this)
                 .setContentTitle("Tap to delete current song.")
-                .setSmallIcon(R.drawable.ic_launcher)
+                .setSmallIcon(R.drawable.can)
                 .setContentIntent(notifyPendingIntent)
                 .build();
         nMN.notify(NOTIFICATION_ID, n);
@@ -194,11 +193,19 @@ public class DeleteActivity extends CapableToDeleteActivity {
 
                     String[] splitted = jsonObject.getJSONObject("context").getString("uri").split(":");
 
-                    if (aboutToDelete && !jsonObject.getBoolean("is_playing")) {
+                    if (!jsonObject.getBoolean("is_playing")) {
 
-                        NotPlayingDialog lockedDialog = new NotPlayingDialog();
+                        if (aboutToDelete) {
 
-                        lockedDialog.show(DeleteActivity.this.getSupportFragmentManager(), "test");
+                            NotPlayingDialog lockedDialog = new NotPlayingDialog();
+
+                            lockedDialog.show(DeleteActivity.this.getSupportFragmentManager(), "test");
+
+                        } else {
+
+                            Toast.makeText(DeleteActivity.this, "No song is currently playing... ",
+                                    Toast.LENGTH_LONG).show();
+                        }
 
                         return;
                     }
