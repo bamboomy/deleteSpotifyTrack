@@ -487,13 +487,21 @@ public class HarvestActivity extends AppCompatActivity {
 
                     String[] splitted = jsonObject.getJSONObject("context").getString("uri").split(":");
 
-                    if ((aboutToDelete || aboutToAdd) && !jsonObject.getBoolean("is_playing")) {
+                    if (!jsonObject.getBoolean("is_playing")) {
 
-                        NotPlayingDialog lockedDialog = new NotPlayingDialog();
+                        if ((aboutToDelete || aboutToAdd)) {
 
-                        lockedDialog.setAction("add");
+                            NotPlayingDialog lockedDialog = new NotPlayingDialog();
 
-                        lockedDialog.show(HarvestActivity.this.getSupportFragmentManager(), "test");
+                            lockedDialog.setAction("add");
+
+                            lockedDialog.show(HarvestActivity.this.getSupportFragmentManager(), "test");
+
+                        } else {
+
+                            Toast.makeText(HarvestActivity.this, "No song is currently playing... ",
+                                    Toast.LENGTH_LONG).show();
+                        }
 
                         return;
                     }
