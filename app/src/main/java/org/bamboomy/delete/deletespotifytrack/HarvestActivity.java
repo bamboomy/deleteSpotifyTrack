@@ -79,7 +79,8 @@ public class HarvestActivity extends AppCompatActivity {
     private Call mCall;
 
     private JSONObject json;
-    private String playlist, track, artistString, playlistString;
+    //private String playlist;
+    private String track, artistString, playlistString;
     private String uri = "1", oldUri = "2";
 
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
@@ -485,8 +486,6 @@ public class HarvestActivity extends AppCompatActivity {
                 try {
                     final JSONObject jsonObject = new JSONObject(response.body().string());
 
-                    String[] splitted = jsonObject.getJSONObject("context").getString("uri").split(":");
-
                     if (!jsonObject.getBoolean("is_playing")) {
 
                         if ((aboutToDelete || aboutToAdd)) {
@@ -506,6 +505,7 @@ public class HarvestActivity extends AppCompatActivity {
                         return;
                     }
 
+                    /*
                     final Request request = new Request.Builder()
                             .url("https://api.spotify.com/v1/playlists/" + splitted[4])
                             .addHeader("Authorization", "Bearer " + mAccessToken)
@@ -532,6 +532,14 @@ public class HarvestActivity extends AppCompatActivity {
                     mCall = mOkHttpClient.newCall(request);
 
                     mCall.enqueue(getNameCallback());
+                    */
+
+                    jsonUri = jsonObject.getJSONObject("item").getString("uri")
+                            .replace(":", "%3A");
+
+                    aboutToAdd = false;
+
+                    performAdd();
 
                 } catch (final JSONException e) {
 

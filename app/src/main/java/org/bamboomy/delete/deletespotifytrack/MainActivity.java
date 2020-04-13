@@ -101,6 +101,12 @@ public class MainActivity extends CapableToDeleteActivity {
 
     private boolean isDeleteGroupVisible = false, isGoldGroupVisible = false;
 
+    public static final String UNKNOWN = "we don't know";
+
+    private ArrayList<List> result = new ArrayList<>();
+
+    private int offset = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -560,8 +566,57 @@ public class MainActivity extends CapableToDeleteActivity {
 
     private void showLists(final String id) {
 
+        offset = 0;
+
+        result = new ArrayList<>();
+
+        addNextLists(id);
+    }
+
+    private void finishUp(){
+
+        SharedPreferences sharedPrefs = PreferenceManager
+                .getDefaultSharedPreferences(MainActivity.this);
+
+        if (addFlag) {
+
+            addFlag = false;
+
+            for (List list : result) {
+
+                if (list.getName().equalsIgnoreCase(sharedPrefs.getString(CHOOSE_KEY, CHOOSE_KEY))) {
+
+                    listId = list.getId();
+
+                    harvestListName = list.getName();
+
+                    add();
+
+                    break;
+                }
+            }
+
+        } else {
+
+            ChooseListDialog appstoreDialog = new ChooseListDialog();
+
+            if (editFlag) {
+
+                appstoreDialog.setData(MainActivity.this, sharedPrefs, result, "Choose a new list...");
+
+            } else {
+
+                appstoreDialog.setData(MainActivity.this, sharedPrefs, result, "");
+            }
+
+            appstoreDialog.show(getSupportFragmentManager(), "doesn't matter");
+        }
+    }
+
+    private void addNextLists(final String id) {
+
         final Request request = new Request.Builder()
-                .url("https://api.spotify.com/v1/me/playlists?limit=50")
+                .url("https://api.spotify.com/v1/me/playlists?offset=" + offset + "&limit=30")
                 .addHeader("Authorization", "Bearer " + mAccessToken)
                 .build();
 
@@ -592,8 +647,6 @@ public class MainActivity extends CapableToDeleteActivity {
 
                     JSONArray array = new JSONObject(response.body().string()).getJSONArray("items");
 
-                    final ArrayList<List> result = new ArrayList<>();
-
                     for (int i = 0; i < array.length(); i++) {
 
                         JSONObject jsonList = array.getJSONObject(i);
@@ -610,43 +663,18 @@ public class MainActivity extends CapableToDeleteActivity {
                         }
                     }
 
-                    SharedPreferences sharedPrefs = PreferenceManager
-                            .getDefaultSharedPreferences(MainActivity.this);
+                    Log.d("lists", "" + array.length() + ", " + result.size());
 
-                    if (addFlag) {
+                    if (array.length() >= 30) {
 
-                        addFlag = false;
+                        offset += 30;
 
-                        for (List list : result) {
-
-                            if (list.getName().equalsIgnoreCase(sharedPrefs.getString(CHOOSE_KEY, CHOOSE_KEY))) {
-
-                                listId = list.getId();
-
-                                harvestListName = list.getName();
-
-                                add();
-
-                                break;
-                            }
-                        }
+                        addNextLists(id);
 
                     } else {
 
-                        ChooseListDialog appstoreDialog = new ChooseListDialog();
-
-                        if (editFlag) {
-
-                            appstoreDialog.setData(MainActivity.this, sharedPrefs, result, "Choose a new list...");
-
-                        } else {
-
-                            appstoreDialog.setData(MainActivity.this, sharedPrefs, result, "");
-                        }
-
-                        appstoreDialog.show(getSupportFragmentManager(), "doesn't matter");
+                        finishUp();
                     }
-
 
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -697,42 +725,52 @@ public class MainActivity extends CapableToDeleteActivity {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 try {
+
+                    Request request = null;
+
                     final JSONObject jsonObject = new JSONObject(response.body().string());
 
-                    String[] splitted = jsonObject.getJSONObject("context").getString("uri").split(":");
+                    if (!jsonObject.isNull("context")) {
 
-                    if (!jsonObject.getBoolean("is_playing")) {
+                        String[] splitted = jsonObject.getJSONObject("context").getString("uri").split(":");
 
-                        if ((aboutToDelete || aboutToAdd)) {
+                        if (!jsonObject.getBoolean("is_playing")) {
 
-                            NotPlayingDialog lockedDialog = new NotPlayingDialog();
+                            if ((aboutToDelete || aboutToAdd)) {
 
-                            if (aboutToDelete) {
+                                NotPlayingDialog lockedDialog = new NotPlayingDialog();
 
-                                lockedDialog.setAction("delete");
+                                if (aboutToDelete) {
+
+                                    lockedDialog.setAction("delete");
+
+                                } else {
+
+                                    lockedDialog.setAction("add");
+                                }
+
+                                lockedDialog.show(MainActivity.this.getSupportFragmentManager(), "test");
 
                             } else {
 
-                                lockedDialog.setAction("add");
+                                Toast.makeText(MainActivity.this, "No song is currently playing... ",
+                                        Toast.LENGTH_LONG).show();
                             }
 
-                            lockedDialog.show(MainActivity.this.getSupportFragmentManager(), "test");
-
-                        } else {
-
-                            Toast.makeText(MainActivity.this, "No song is currently playing... ",
-                                    Toast.LENGTH_LONG).show();
+                            return;
                         }
 
-                        return;
+                        request = new Request.Builder()
+                                .url("https://api.spotify.com/v1/playlists/" + splitted[4])
+                                .addHeader("Authorization", "Bearer " + mAccessToken)
+                                .build();
+
+                        playlist = splitted[4];
+
+                    } else {
+
+                        playlist = UNKNOWN;
                     }
-
-                    final Request request = new Request.Builder()
-                            .url("https://api.spotify.com/v1/playlists/" + splitted[4])
-                            .addHeader("Authorization", "Bearer " + mAccessToken)
-                            .build();
-
-                    playlist = splitted[4];
 
                     final String name = jsonObject.getJSONObject("item").getString("name");
 
@@ -779,10 +817,33 @@ public class MainActivity extends CapableToDeleteActivity {
                                 .replace(":", "%3A");
                     }
 
-                    cancelCall();
-                    mCall = mOkHttpClient.newCall(request);
+                    if (request != null) {
 
-                    mCall.enqueue(getNameCallback());
+                        cancelCall();
+
+                        final Request finalRequest = request;
+
+                        mCall = mOkHttpClient.newCall(finalRequest);
+
+                        mCall.enqueue(getNameCallback());
+
+                    } else {
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+
+                                final TextView codeView = findViewById(R.id.list);
+                                codeView.setText("List: " + UNKNOWN);
+
+                                if (aboutToDelete) {
+
+                                    Toast.makeText(MainActivity.this, "Can't delete from this list...",
+                                            Toast.LENGTH_LONG).show();
+                                }
+                            }
+                        });
+                    }
 
                 } catch (final JSONException e) {
 

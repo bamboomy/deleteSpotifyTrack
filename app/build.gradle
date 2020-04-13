@@ -6,8 +6,8 @@ android {
         applicationId "org.bamboomy.delete.deletespotifytrack"
         minSdkVersion 19
         targetSdkVersion 28
-        versionCode 9
-        versionName "harvest"
+        versionCode 10
+        versionName "not_playing_check"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
